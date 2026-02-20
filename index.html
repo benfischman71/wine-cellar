@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,97 +14,7 @@
     --bg: #110E0C; --surface: #1A1412; --surface2: #211B17; --surface3: #2A221C;
     --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.1);
     --gold: #C5A856; --gold-dim: rgba(197,168,86,0.15); --gold-glow: rgba(197,168,86,0.3);
-    --wine: #722F37; --wine-light: #8B3A44;{
-  "name": "wine-cellar",
-  "version": "1.0.0",# 🍷 Wine Cellar
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "api/analyze.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/analyze",
-      "dest": "/api/analyze.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ]
-}
-
-A mobile wine collection app with AI-powered label scanning. Scan a wine label with your phone camera and it automatically identifies the wine, estimates its value, and suggests optimal drinking dates.
-
-## Features
-
-- **📷 Label Scanning** — Camera or photo upload → AI identifies the wine
-- **📊 Collection Tracking** — Value, quantity, ratings, tasting notes
-- **🕐 Drinking Windows** — When to open, peak years, decline dates
-- **🔍 Search & Filter** — By status, type, name, vintage
-- **📱 Mobile-First** — Designed for phones, works as a home screen app
-
-## Setup
-
-### 1. Get an Anthropic API Key
-
-- Go to [console.anthropic.com](https://console.anthropic.com)
-- Create an account and generate an API key
-- You'll need this in step 4
-
-### 2. Create a GitHub Repository
-
-- Go to [github.com/new](https://github.com/new)
-- Name it `wine-cellar`, set to **Public**
-- Upload all the files from this project (or push via git)
-
-### 3. Deploy on Vercel
-
-- Go to [vercel.com](https://vercel.com) and sign in with GitHub
-- Click **"Add New" → Project**
-- Import your `wine-cellar` repository
-- Click **Deploy**
-
-### 4. Add Your API Key
-
-- In your Vercel project, go to **Settings → Environment Variables**
-- Add a new variable:
-  - **Name:** `ANTHROPIC_API_KEY`
-  - **Value:** your API key (starts with `sk-ant-...`)
-- Click **Save**
-- Go to **Deployments** → click the three dots on the latest → **Redeploy**
-
-### 5. Use It
-
-- Visit your Vercel URL (shown on the dashboard, like `wine-cellar-xyz.vercel.app`)
-- On your phone, open the URL in Safari/Chrome
-- **Add to Home Screen** for a native app experience
-
-## Project Structure
-
-```
-wine-cellar/
-├── index.html        ← The full app (frontend)
-├── api/
-│   └── analyze.js    ← Backend proxy (keeps your API key secret)
-├── vercel.json       ← Vercel routing config
-└── package.json
-```
-
-## Cost
-
-The Anthropic API charges per use. Each label scan costs roughly $0.01–0.03 depending on image size. A typical hobby user scanning a few bottles a week would spend under $1/month.
-
-  "private": true
-}
-
+    --wine: #722F37; --wine-light: #8B3A44;
     --text: #F5F0E8; --text2: #D4C8B8; --text3: #A09080; --text4: #8A7A6A; --text5: #6A5A4A; --text6: #5A4A3A;
     --green: #2E7D32; --green-light: #4CAF50; --green-bg: rgba(46,125,50,0.1);
     --red: #C62828; --red-light: #E57373; --red-bg: rgba(198,40,40,0.1);
@@ -352,17 +261,65 @@ function getTypeColor(type) {
 }
 function fmt(val) { return "$" + Number(val || 0).toLocaleString("en-US", { maximumFractionDigits: 0 }); }
 
-function loadWines() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
+// ─── Database API ───
+async function loadWinesFromDB() {
+  try {
+    const res = await fetch("/api/wines");
+    if (!res.ok) throw new Error("Failed to load");
+    return await res.json();
+  } catch (e) {
+    console.error("Load error:", e);
+    // Fallback to localStorage if DB not ready
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
 }
-function saveWines(wines) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(wines));
+
+async function apiAddWine(wine) {
+  try {
+    const res = await fetch("/api/wines", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(wine),
+    });
+    if (!res.ok) throw new Error("Failed to add");
+    return await res.json();
+  } catch (e) {
+    console.error("Add error:", e);
+    return null;
+  }
+}
+
+async function apiUpdateWine(id, updates) {
+  try {
+    const res = await fetch("/api/wines/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error("Failed to update");
+    return await res.json();
+  } catch (e) {
+    console.error("Update error:", e);
+    return null;
+  }
+}
+
+async function apiDeleteWine(id) {
+  try {
+    const res = await fetch("/api/wines/" + id, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete");
+    return true;
+  } catch (e) {
+    console.error("Delete error:", e);
+    return false;
+  }
 }
 
 // ─── State ───
 let state = {
-  wines: loadWines(),
+  wines: [],
+  loading: true,
   view: "collection", // collection | detail | scan | add
   selectedId: null,
   filter: "all",
@@ -380,6 +337,15 @@ let state = {
   toast: null,
 };
 
+// Load wines on startup
+(async function init() {
+  render(); // Show loading state
+  const wines = await loadWinesFromDB();
+  state.wines = wines;
+  state.loading = false;
+  render();
+})();
+
 function setState(patch) {
   Object.assign(state, typeof patch === "function" ? patch(state) : patch);
   render();
@@ -391,27 +357,36 @@ function showToast(msg) {
 }
 
 // ─── Wine CRUD ───
-function addWine(wine) {
-  wine.id = Date.now();
+async function addWine(wine) {
   wine.addedDate = new Date().toISOString().split("T")[0];
-  state.wines.unshift(wine);
-  saveWines(state.wines);
   setState({ view: "collection" });
+  showToast("🍷 Adding to collection...");
+  const saved = await apiAddWine(wine);
+  if (saved) {
+    state.wines.unshift(saved);
+  } else {
+    // Fallback: add locally
+    wine.id = Date.now();
+    state.wines.unshift(wine);
+  }
+  setState({});
   showToast("🍷 Added to collection");
 }
-function drinkWine(id) {
-  state.wines = state.wines.map(w => w.id === id ? { ...w, quantity: Math.max(0, w.quantity - 1) } : w);
-  saveWines(state.wines);
+async function drinkWine(id) {
   const w = state.wines.find(w => w.id === id);
-  if (!w || w.quantity <= 0) setState({ view: "collection", selectedId: null });
-  else render();
+  if (!w) return;
+  const newQty = Math.max(0, w.quantity - 1);
+  w.quantity = newQty;
+  render();
+  await apiUpdateWine(id, { quantity: newQty });
+  if (newQty <= 0) setState({ view: "collection", selectedId: null });
   showToast("🥂 Cheers! Bottle opened");
 }
-function removeWine(id) {
+async function removeWine(id) {
   if (!confirm("Remove this wine from your collection?")) return;
   state.wines = state.wines.filter(w => w.id !== id);
-  saveWines(state.wines);
   setState({ view: "collection", selectedId: null });
+  await apiDeleteWine(id);
   showToast("Removed from collection");
 }
 
@@ -545,6 +520,12 @@ function escHtml(str) {
 }
 
 function renderCollection() {
+  if (state.loading) {
+    return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 20px;gap:16px">
+      <div class="spinner"></div>
+      <p style="font-family:var(--serif);font-size:16px;color:var(--text3)">Loading your cellar...</p>
+    </div>`;
+  }
   const wines = state.wines;
   const totalValue = wines.reduce((s, w) => s + (w.currentValue || 0) * w.quantity, 0);
   const totalBottles = wines.reduce((s, w) => s + w.quantity, 0);
