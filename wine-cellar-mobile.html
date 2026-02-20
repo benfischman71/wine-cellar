@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#110E0C">
+<title>Cellar — Wine Collection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Libre+Franklin:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #110E0C; --surface: #1A1412; --surface2: #211B17; --surface3: #2A221C;
+    --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.1);
+    --gold: #C5A856; --gold-dim: rgba(197,168,86,0.15); --gold-glow: rgba(197,168,86,0.3);
+    --wine: #722F37; --wine-light: #8B3A44;
+    --text: #F5F0E8; --text2: #D4C8B8; --text3: #A09080; --text4: #8A7A6A; --text5: #6A5A4A; --text6: #5A4A3A;
+    --green: #2E7D32; --green-light: #4CAF50; --green-bg: rgba(46,125,50,0.1);
+    --red: #C62828; --red-light: #E57373; --red-bg: rgba(198,40,40,0.1);
+    --orange: #E65100; --orange-bg: rgba(230,81,0,0.1);
+    --blue: #1565C0; --blue-bg: rgba(21,101,192,0.1);
+    --amber: #B8860B; --amber-bg: rgba(184,134,11,0.1);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'Libre Franklin', -apple-system, sans-serif;
+    --mono: 'DM Mono', 'SF Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--sans); background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  }
+  input, select, textarea, button { font-family: inherit; }
+  input, select, textarea {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--border2); background: rgba(255,255,255,0.04);
+    color: var(--text); font-size: 16px; outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold-glow); }
+  select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A7A6A' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  select option { background: var(--surface); color: var(--text2); }
+  textarea { resize: vertical; min-height: 60px; }
+  button { cursor: pointer; border: none; background: none; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(197,168,86,0.15); border-radius: 2px; }
+
+  /* App Shell */
+  #app { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  .page { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(80px + var(--safe-bottom)); }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(17,14,12,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 8px 0 calc(8px + var(--safe-bottom));
+  }
+  .nav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 16px; color: var(--text5); font-size: 10px; letter-spacing: 0.06em;
+    text-transform: uppercase; transition: color 0.2s;
+  }
+  .nav-btn.active { color: var(--gold); }
+  .nav-btn .nav-icon { font-size: 22px; line-height: 1; }
+  .scan-fab {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--wine), var(--wine-light));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-top: -20px;
+    box-shadow: 0 4px 20px rgba(114,47,55,0.4);
+    transition: transform 0.2s;
+  }
+  .scan-fab:active { transform: scale(0.92); }
+
+  /* Label styles */
+  .label-sm { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text6); margin-bottom: 6px; }
+  .label-xs { font-size: 11px; color: var(--text5); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .field-group { margin-bottom: 14px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .field-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+
+  /* Cards */
+  .wine-card {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px; margin-bottom: 10px;
+    display: flex; gap: 14px; align-items: center;
+    transition: all 0.2s; cursor: pointer;
+  }
+  .wine-card:active { background: rgba(255,255,255,0.05); transform: scale(0.985); }
+  .wine-thumb {
+    width: 52px; height: 68px; border-radius: 10px; flex-shrink: 0;
+    object-fit: cover; border: 1px solid var(--border);
+  }
+  .wine-thumb-placeholder {
+    width: 52px; height: 68px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; border: 1px solid var(--border);
+  }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 8px; border-radius: 6px; font-family: var(--mono);
+    font-size: 10px; font-weight: 500;
+  }
+
+  /* Stat boxes */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .stat-box {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px;
+  }
+  .stat-value { font-family: var(--serif); font-size: 22px; font-weight: 700; }
+  .stat-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text6); margin-top: 4px; }
+
+  /* Buttons */
+  .btn-primary {
+    width: 100%; padding: 16px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--wine), var(--wine-light));
+    color: var(--text); font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 20px rgba(114,47,55,0.3); transition: transform 0.15s;
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-secondary {
+    width: 100%; padding: 14px; border-radius: 12px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border2);
+    color: var(--text3); font-size: 14px; font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-secondary:active { background: rgba(255,255,255,0.08); }
+  .btn-green {
+    width: 100%; padding: 16px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--green), #388E3C);
+    color: var(--text); font-size: 15px; font-weight: 600;
+    transition: transform 0.15s;
+  }
+  .btn-green:active { transform: scale(0.97); }
+  .btn-danger {
+    padding: 14px; border-radius: 12px; width: 100%;
+    background: var(--red-bg); border: 1px solid rgba(198,40,40,0.2);
+    color: var(--red-light); font-size: 13px; font-weight: 500;
+  }
+
+  /* Filter chips */
+  .chip-row { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; scrollbar-width: none; }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0; padding: 7px 14px; border-radius: 20px;
+    font-family: var(--mono); font-size: 12px; white-space: nowrap;
+    border: 1px solid var(--border); color: var(--text4);
+    background: transparent; transition: all 0.2s;
+  }
+  .chip.active { background: var(--gold-dim); border-color: var(--gold-glow); color: var(--gold); }
+
+  /* Page header */
+  .page-header {
+    padding: 20px 20px 0; position: sticky; top: 0; z-index: 10;
+    background: linear-gradient(var(--bg) 85%, transparent);
+  }
+  .page-title { font-family: var(--serif); font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+
+  /* Detail sections */
+  .detail-section {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 12px;
+  }
+
+  /* Timeline */
+  .timeline-track { position: relative; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; margin: 8px 0; }
+  .timeline-segment { position: absolute; top: 0; height: 100%; border-radius: 4px; }
+  .timeline-now { position: absolute; top: -4px; width: 3px; height: 16px; background: var(--gold); border-radius: 2px; transform: translateX(-1px); box-shadow: 0 0 8px rgba(197,168,86,0.5); }
+  .timeline-labels { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--text4); margin-top: 4px; }
+
+  /* Camera view */
+  .camera-view { position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 3/4; }
+  .camera-view video { width: 100%; height: 100%; object-fit: cover; }
+  .camera-overlay {
+    position: absolute; inset: 12%; border: 2px solid rgba(197,168,86,0.4);
+    border-radius: 12px; pointer-events: none;
+  }
+  .camera-controls { position: absolute; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; gap: 16px; }
+  .capture-btn {
+    width: 68px; height: 68px; border-radius: 50%;
+    border: 3px solid var(--gold); background: rgba(0,0,0,0.4);
+    color: #fff; font-size: 26px; display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+  }
+  .capture-btn:active { transform: scale(0.9); }
+
+  /* Spinner */
+  .spinner { width: 40px; height: 40px; border: 3px solid rgba(197,168,86,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Confirmation toast */
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--green); color: #fff; padding: 12px 24px;
+    border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 1000;
+    animation: slideDown 0.3s ease, fadeOut 0.3s ease 2s forwards;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  @keyframes slideDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  @keyframes fadeOut { to { opacity: 0; transform: translate(-50%, -10px); } }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 60px 20px; }
+  .empty-state .icon { font-size: 56px; margin-bottom: 16px; }
+  .empty-state h3 { font-family: var(--serif); font-size: 22px; margin-bottom: 8px; }
+  .empty-state p { font-size: 14px; color: var(--text4); }
+
+  /* Captured preview */
+  .captured-preview { border-radius: 14px; overflow: hidden; margin-bottom: 16px; position: relative; }
+  .captured-preview img { width: 100%; display: block; max-height: 240px; object-fit: cover; }
+  .analyzing-overlay {
+    position: absolute; inset: 0; background: rgba(17,14,12,0.85);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  }
+
+  /* Success banner */
+  .scan-success {
+    background: rgba(46,125,50,0.1); border: 1px solid rgba(46,125,50,0.25);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .scan-success .check { color: var(--green-light); font-size: 18px; }
+  .scan-success p { font-size: 12px; color: var(--text3); margin: 0; }
+
+  /* Back button */
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--gold); font-size: 14px; font-weight: 500;
+    padding: 8px 0; margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const CURRENT_YEAR = 2026;
+const STORAGE_KEY = "cellar-wines-v2";
+
+// ─── Utilities ───
+function getStatusInfo(wine) {
+  const y = CURRENT_YEAR;
+  if (y < wine.drinkFrom) return { label: "Too Young", color: "var(--amber)", bg: "var(--amber-bg)", icon: "⏳" };
+  if (y >= wine.peakStart && y <= wine.peakEnd) return { label: "Peak Window", color: "var(--green-light)", bg: "var(--green-bg)", icon: "✦" };
+  if (y > wine.drinkBy) return { label: "Past Prime", color: "var(--red-light)", bg: "var(--red-bg)", icon: "⚠" };
+  if (y >= wine.drinkFrom && y < wine.peakStart) return { label: "Approachable", color: "#5C9CE5", bg: "var(--blue-bg)", icon: "◆" };
+  return { label: "Drink Soon", color: "#FF8A50", bg: "var(--orange-bg)", icon: "◈" };
+}
+function getTypeColor(type) {
+  return { Red: "#8B3A44", White: "#C5A856", Sparkling: "#D4A843", "Rosé": "#D4728A", Dessert: "#B8860B" }[type] || "#666";
+}
+function fmt(val) { return "$" + Number(val || 0).toLocaleString("en-US", { maximumFractionDigits: 0 }); }
+
+function loadWines() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function saveWines(wines) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(wines));
+}
+
+// ─── State ───
+let state = {
+  wines: loadWines(),
+  view: "collection", // collection | detail | scan | add
+  selectedId: null,
+  filter: "all",
+  sortBy: "name",
+  search: "",
+  // scan
+  scanStep: "choose", // choose | camera | analyzing | result
+  capturedImage: null,
+  editFields: null,
+  scanError: null,
+  cameraStream: null,
+  // add (manual)
+  addFields: null,
+  // toast
+  toast: null,
+};
+
+function setState(patch) {
+  Object.assign(state, typeof patch === "function" ? patch(state) : patch);
+  render();
+}
+
+function showToast(msg) {
+  setState({ toast: msg });
+  setTimeout(() => setState({ toast: null }), 2500);
+}
+
+// ─── Wine CRUD ───
+function addWine(wine) {
+  wine.id = Date.now();
+  wine.addedDate = new Date().toISOString().split("T")[0];
+  state.wines.unshift(wine);
+  saveWines(state.wines);
+  setState({ view: "collection" });
+  showToast("🍷 Added to collection");
+}
+function drinkWine(id) {
+  state.wines = state.wines.map(w => w.id === id ? { ...w, quantity: Math.max(0, w.quantity - 1) } : w);
+  saveWines(state.wines);
+  const w = state.wines.find(w => w.id === id);
+  if (!w || w.quantity <= 0) setState({ view: "collection", selectedId: null });
+  else render();
+  showToast("🥂 Cheers! Bottle opened");
+}
+function removeWine(id) {
+  if (!confirm("Remove this wine from your collection?")) return;
+  state.wines = state.wines.filter(w => w.id !== id);
+  saveWines(state.wines);
+  setState({ view: "collection", selectedId: null });
+  showToast("Removed from collection");
+}
+
+// ─── Camera ───
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 960 } } });
+    setState({ cameraStream: stream, scanStep: "camera", scanError: null });
+    setTimeout(() => {
+      const v = document.getElementById("camera-video");
+      if (v) v.srcObject = stream;
+    }, 50);
+  } catch {
+    setState({ scanError: "Camera access denied. Use photo upload instead." });
+  }
+}
+function stopCamera() {
+  if (state.cameraStream) {
+    state.cameraStream.getTracks().forEach(t => t.stop());
+    state.cameraStream = null;
+  }
+}
+function capturePhoto() {
+  const v = document.getElementById("camera-video");
+  if (!v) return;
+  const c = document.createElement("canvas");
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext("2d").drawImage(v, 0, 0);
+  const dataUrl = c.toDataURL("image/jpeg", 0.85);
+  stopCamera();
+  setState({ capturedImage: dataUrl, scanStep: "analyzing" });
+  analyzeLabel(dataUrl);
+}
+function handleFileUpload(e) {
+  const f = e.target.files?.[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = (ev) => {
+    setState({ capturedImage: ev.target.result, scanStep: "analyzing" });
+    analyzeLabel(ev.target.result);
+  };
+  r.readAsDataURL(f);
+}
+
+function compressImage(dataUrl, maxW = 1200) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = (h * maxW) / w; w = maxW; }
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", 0.85).split(",")[1]);
+    };
+    img.onerror = () => resolve(dataUrl.split(",")[1]);
+    img.src = dataUrl;
+  });
+}
+
+async function analyzeLabel(dataUrl) {
+  setState({ scanStep: "analyzing", scanError: null });
+  try {
+    const base64 = await compressImage(dataUrl, 1200);
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514", max_tokens: 1000,
+        messages: [{ role: "user", content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+          { type: "text", text: `You are an expert sommelier. Carefully read every word visible on this wine label. Extract ONLY information you can actually see on the label — do NOT guess or infer details that aren't visible.\nReturn ONLY a JSON object with no markdown or backticks:\n{"name":"exact wine name from label","vintage":2020,"region":"region from label","country":"country","grape":"grape variety if visible","type":"Red|White|Rosé|Sparkling|Dessert","estimatedValue":50,"drinkFrom":2024,"drinkBy":2035,"peakStart":2026,"peakEnd":2032,"rating":90,"notes":"Brief tasting profile"}\nBe precise with name and vintage — read them from the label. For estimatedValue, give current market retail USD. Current year is 2026.` }
+        ]}]
+      })
+    });
+    if (!res.ok) {
+      setState({ scanError: `API error (${res.status}). Try a clearer photo or enter manually.`, scanStep: "choose" }); return;
+    }
+    const data = await res.json();
+    if (data.error) {
+      setState({ scanError: data.error.message || "API error", scanStep: "choose" }); return;
+    }
+    const txt = (data.content || []).map(c => c.text || "").join("");
+    const clean = txt.replace(/```json\s?|```/g, "").trim();
+    let parsed;
+    try { parsed = JSON.parse(clean); }
+    catch { const m = clean.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
+    if (!parsed) { setState({ scanError: "Could not parse response. Try again.", scanStep: "choose" }); return; }
+    setState({
+      editFields: {
+        name: parsed.name || "", vintage: String(parsed.vintage || ""), region: parsed.region || "",
+        country: parsed.country || "", grape: parsed.grape || "", type: parsed.type || "Red",
+        estimatedValue: String(parsed.estimatedValue || ""), drinkFrom: String(parsed.drinkFrom || ""),
+        drinkBy: String(parsed.drinkBy || ""), peakStart: String(parsed.peakStart || ""),
+        peakEnd: String(parsed.peakEnd || ""), rating: String(parsed.rating || ""), notes: parsed.notes || "",
+        quantity: "1",
+      },
+      scanStep: "result"
+    });
+  } catch (err) {
+    setState({ scanError: `Analysis failed: ${err.message}`, scanStep: "choose" });
+  }
+}
+
+function addFromScan() {
+  const f = state.editFields; if (!f || !f.name) return;
+  addWine({
+    name: f.name, vintage: parseInt(f.vintage) || CURRENT_YEAR, region: f.region, country: f.country,
+    grape: f.grape, type: f.type, quantity: parseInt(f.quantity) || 1,
+    purchasePrice: parseFloat(f.estimatedValue) || 0, currentValue: parseFloat(f.estimatedValue) || 0,
+    drinkFrom: parseInt(f.drinkFrom) || CURRENT_YEAR, drinkBy: parseInt(f.drinkBy) || CURRENT_YEAR + 10,
+    peakStart: parseInt(f.peakStart) || CURRENT_YEAR + 2, peakEnd: parseInt(f.peakEnd) || CURRENT_YEAR + 8,
+    rating: parseInt(f.rating) || 88, notes: f.notes, image: state.capturedImage,
+  });
+}
+
+function addFromManual() {
+  const f = state.addFields; if (!f || !f.name) return;
+  addWine({
+    name: f.name, vintage: parseInt(f.vintage) || CURRENT_YEAR, region: f.region, country: f.country,
+    grape: f.grape, type: f.type, quantity: parseInt(f.quantity) || 1,
+    purchasePrice: parseFloat(f.purchasePrice) || 0, currentValue: parseFloat(f.estimatedValue) || 0,
+    drinkFrom: parseInt(f.drinkFrom) || CURRENT_YEAR, drinkBy: parseInt(f.drinkBy) || CURRENT_YEAR + 10,
+    peakStart: parseInt(f.peakStart) || CURRENT_YEAR + 2, peakEnd: parseInt(f.peakEnd) || CURRENT_YEAR + 8,
+    rating: parseInt(f.rating) || 88, notes: f.notes, image: null,
+  });
+}
+
+// ─── Navigation ───
+function goTo(view, extra = {}) {
+  stopCamera();
+  setState({ view, scanStep: "choose", capturedImage: null, editFields: null, scanError: null, ...extra });
+}
+
+// ─── Render Helpers ───
+function escHtml(str) {
+  const d = document.createElement("div"); d.textContent = str || ""; return d.innerHTML;
+}
+
+function renderCollection() {
+  const wines = state.wines;
+  const totalValue = wines.reduce((s, w) => s + (w.currentValue || 0) * w.quantity, 0);
+  const totalBottles = wines.reduce((s, w) => s + w.quantity, 0);
+  const peakCount = wines.filter(w => { const s = getStatusInfo(w); return s.label === "Peak Window" || s.label === "Drink Soon"; }).length;
+
+  let filtered = wines.filter(w => {
+    if (state.filter === "all") return true;
+    if (state.filter === "peak") return getStatusInfo(w).label === "Peak Window";
+    if (state.filter === "drink-soon") return getStatusInfo(w).label === "Drink Soon";
+    if (state.filter === "aging") return getStatusInfo(w).label === "Too Young";
+    return w.type?.toLowerCase() === state.filter;
+  });
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    filtered = filtered.filter(w => [w.name, w.region, w.grape, w.country].some(s => (s||"").toLowerCase().includes(q)));
+  }
+  filtered.sort((a, b) => {
+    if (state.sortBy === "name") return (a.name||"").localeCompare(b.name||"");
+    if (state.sortBy === "vintage") return (a.vintage||0) - (b.vintage||0);
+    if (state.sortBy === "value") return (b.currentValue||0) - (a.currentValue||0);
+    if (state.sortBy === "rating") return (b.rating||0) - (a.rating||0);
+    return 0;
+  });
+
+  const filters = [
+    { k: "all", l: "All" }, { k: "peak", l: "✦ Peak" }, { k: "drink-soon", l: "◈ Soon" },
+    { k: "aging", l: "⏳ Aging" }, { k: "red", l: "Red" }, { k: "white", l: "White" }, { k: "sparkling", l: "Sparkle" },
+  ];
+
+  let html = `
+    <div class="page-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div class="label-sm">Collection</div>
+          <h1 class="page-title">${escHtml("Wine Cellar")}</h1>
+        </div>
+      </div>
+    </div>
+    <div style="padding:0 20px">
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-value" style="color:var(--gold)">${fmt(totalValue)}</div><div class="stat-label">Value</div></div>
+        <div class="stat-box"><div class="stat-value">${totalBottles}</div><div class="stat-label">Bottles</div></div>
+        <div class="stat-box"><div class="stat-value" style="color:var(--green-light)">${peakCount}</div><div class="stat-label">Ready</div></div>
+      </div>
+      <div style="margin-bottom:12px">
+        <input type="text" placeholder="Search wines..." value="${escHtml(state.search)}" oninput="setState({search:this.value})" style="font-size:14px;padding:10px 14px;margin-bottom:10px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <div class="chip-row" style="flex:1">
+            ${filters.map(f => `<button class="chip ${state.filter === f.k ? 'active' : ''}" onclick="setState({filter:'${f.k}'})">${f.l}</button>`).join("")}
+          </div>
+          <select value="${state.sortBy}" onchange="setState({sortBy:this.value})" style="width:auto;padding:7px 32px 7px 10px;font-size:12px;font-family:var(--mono);border-radius:8px;flex-shrink:0">
+            <option value="name" ${state.sortBy==="name"?"selected":""}>A→Z</option>
+            <option value="vintage" ${state.sortBy==="vintage"?"selected":""}>Vintage</option>
+            <option value="value" ${state.sortBy==="value"?"selected":""}>Value ↓</option>
+            <option value="rating" ${state.sortBy==="rating"?"selected":""}>Rating ↓</option>
+          </select>
+        </div>
+      </div>`;
+
+  if (filtered.length === 0) {
+    html += `<div class="empty-state"><div class="icon">🍷</div><h3>${wines.length === 0 ? "Your Cellar Awaits" : "No matches"}</h3><p>${wines.length === 0 ? "Scan a label or add a wine to start." : "Try adjusting your filters."}</p></div>`;
+  } else {
+    filtered.forEach((w, i) => {
+      const st = getStatusInfo(w);
+      const vd = (w.currentValue || 0) - (w.purchasePrice || 0);
+      const thumb = w.image
+        ? `<img class="wine-thumb" src="${w.image}" alt="">`
+        : `<div class="wine-thumb-placeholder" style="background:${getTypeColor(w.type)}18;border-color:${getTypeColor(w.type)}33">🍷</div>`;
+      html += `
+        <div class="wine-card" onclick="setState({view:'detail',selectedId:${w.id}})" style="animation:slideUp 0.3s ease ${i * 0.03}s both">
+          ${thumb}
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--serif);font-size:15px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(w.name)}</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text4);margin-bottom:6px">${escHtml(w.vintage + "")} · ${escHtml(w.region)}</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="status-pill" style="background:${st.bg};color:${st.color}">${st.icon} ${st.label}</span>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text5)">${escHtml(w.grape)}</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:var(--serif);font-size:15px;font-weight:600;color:var(--gold)">${fmt(w.currentValue)}</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text5)">×${w.quantity}</div>
+          </div>
+        </div>`;
+    });
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderDetail() {
+  const w = state.wines.find(w => w.id === state.selectedId);
+  if (!w) return `<div class="empty-state"><p>Wine not found</p></div>`;
+  const st = getStatusInfo(w);
+  const vd = (w.currentValue||0) - (w.purchasePrice||0);
+  const vPct = w.purchasePrice ? ((vd / w.purchasePrice) * 100).toFixed(1) : "0";
+  const total = (w.currentValue||0) * w.quantity;
+  const tStart = Math.min(w.vintage || CURRENT_YEAR, (w.drinkFrom||CURRENT_YEAR) - 2);
+  const tEnd = (w.drinkBy||CURRENT_YEAR+10) + 3;
+  const tRange = tEnd - tStart || 1;
+  const pct = (yr) => Math.max(0, Math.min(100, ((yr - tStart) / tRange) * 100));
+
+  let html = `
+    <div style="padding:20px">
+      <button class="back-btn" onclick="goTo('collection')">← Back</button>
+      ${w.image ? `<div style="border-radius:14px;overflow:hidden;margin-bottom:20px;border:1px solid var(--border)"><img src="${w.image}" alt="" style="width:100%;max-height:220px;object-fit:cover;display:block"></div>` : ""}
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span class="status-pill" style="background:${st.bg};color:${st.color}">${st.icon} ${st.label}</span>
+        <span class="status-pill" style="background:${getTypeColor(w.type)}22;color:${getTypeColor(w.type)}">${escHtml(w.type)}</span>
+      </div>
+      <h2 style="font-family:var(--serif);font-size:24px;font-weight:700;margin-bottom:4px;letter-spacing:-0.02em">${escHtml(w.name)}</h2>
+      <p style="font-family:var(--mono);font-size:13px;color:var(--gold);margin-bottom:20px">${escHtml(w.vintage+"")} · ${escHtml(w.region)}${w.country ? ", " + escHtml(w.country) : ""}</p>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="label-sm">Value</div>
+          <div class="stat-value" style="color:var(--gold);font-size:20px">${fmt(w.currentValue)}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:${vd >= 0 ? "var(--green-light)" : "var(--red-light)"};margin-top:2px">${vd >= 0 ? "+" : ""}${vPct}%</div>
+        </div>
+        <div class="stat-box">
+          <div class="label-sm">Holding</div>
+          <div class="stat-value" style="font-size:20px">${fmt(total)}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text4);margin-top:2px">${w.quantity} bottle${w.quantity>1?"s":""}</div>
+        </div>
+        <div class="stat-box">
+          <div class="label-sm">Rating</div>
+          <div class="stat-value" style="font-size:20px;color:var(--gold)">${w.rating||"—"}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text5);margin-top:2px">points</div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="label-sm">Drinking Window</div>
+        <div class="timeline-track">
+          <div class="timeline-segment" style="left:${pct(w.drinkFrom)}%;width:${pct(w.drinkBy)-pct(w.drinkFrom)}%;background:rgba(197,168,86,0.2)"></div>
+          <div class="timeline-segment" style="left:${pct(w.peakStart)}%;width:${pct(w.peakEnd)-pct(w.peakStart)}%;background:linear-gradient(90deg,var(--green),var(--green-light));opacity:0.6"></div>
+          <div class="timeline-now" style="left:${pct(CURRENT_YEAR)}%"></div>
+        </div>
+        <div class="timeline-labels">
+          <span>Ready ${w.drinkFrom}</span>
+          <span style="color:var(--green-light)">Peak ${w.peakStart}–${w.peakEnd}</span>
+          <span>By ${w.drinkBy}</span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          ${[{l:"Grape",v:w.grape},{l:"Country",v:w.country},{l:"Paid",v:fmt(w.purchasePrice)},{l:"Added",v:w.addedDate}].map(x => `
+            <div><div class="label-sm">${x.l}</div><div style="font-family:var(--mono);font-size:13px;color:var(--text2)">${escHtml(x.v||"—")}</div></div>
+          `).join("")}
+        </div>
+      </div>
+
+      ${w.notes ? `<div class="detail-section"><div class="label-sm">Tasting Notes</div><p style="font-family:var(--serif);font-size:14px;font-style:italic;color:var(--text3);line-height:1.7">${escHtml(w.notes)}</p></div>` : ""}
+
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <button class="btn-secondary" onclick="drinkWine(${w.id})" ${w.quantity<1?'disabled style="opacity:0.4"':""} style="flex:2;font-size:15px">🍷 Open a Bottle</button>
+      </div>
+      <button class="btn-danger" onclick="removeWine(${w.id})">Remove from Collection</button>
+    </div>`;
+  return html;
+}
+
+function renderScan() {
+  const s = state.scanStep;
+  let html = `<div style="padding:20px">
+    <button class="back-btn" onclick="goTo('collection')">← Back</button>
+    <h2 class="page-title" style="margin-bottom:4px">Scan Label</h2>
+    <p style="font-size:13px;color:var(--text4);margin-bottom:20px">Take a photo or upload an image of the wine label</p>`;
+
+  if (state.scanError) {
+    html += `<div style="background:var(--red-bg);border:1px solid rgba(198,40,40,0.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--red-light)">${escHtml(state.scanError)}</div>`;
+  }
+
+  if (s === "choose") {
+    html += `
+      <button class="btn-primary" onclick="startCamera()" style="margin-bottom:12px"><span style="font-size:20px">📷</span> Use Camera</button>
+      <button class="btn-secondary" onclick="document.getElementById('file-input').click()" style="margin-bottom:12px"><span style="font-size:20px">🖼</span> Upload Photo</button>
+      <input id="file-input" type="file" accept="image/*" onchange="handleFileUpload(event)" style="display:none">
+      <div style="text-align:center;padding:24px 0">
+        <p style="font-size:12px;color:var(--text5)">Or</p>
+        <button class="back-btn" onclick="goTo('add',{addFields:{name:'',vintage:'',region:'',country:'',grape:'',type:'Red',estimatedValue:'',purchasePrice:'',drinkFrom:'',drinkBy:'',peakStart:'',peakEnd:'',rating:'',notes:'',quantity:'1'}})" style="justify-content:center;margin:0 auto">Enter details manually →</button>
+      </div>`;
+  }
+
+  if (s === "camera") {
+    html += `
+      <div class="camera-view">
+        <video id="camera-video" autoplay playsinline muted></video>
+        <div class="camera-overlay"></div>
+        <div class="camera-controls">
+          <button class="capture-btn" onclick="stopCamera();setState({scanStep:'choose'})" style="border-color:var(--text4);font-size:18px">✕</button>
+          <button class="capture-btn" onclick="capturePhoto()">📸</button>
+        </div>
+      </div>`;
+  }
+
+  if (s === "analyzing") {
+    html += `
+      <div class="captured-preview">
+        ${state.capturedImage ? `<img src="${state.capturedImage}" alt="">` : ""}
+        <div class="analyzing-overlay">
+          <div class="spinner"></div>
+          <div style="font-family:var(--serif);font-size:17px;color:var(--text)">Analyzing Label...</div>
+          <div style="font-size:13px;color:var(--text4)">Identifying wine, value & drinking window</div>
+        </div>
+      </div>`;
+  }
+
+  if (s === "result" && state.editFields) {
+    const f = state.editFields;
+    html += `
+      ${state.capturedImage ? `<div class="captured-preview"><img src="${state.capturedImage}" alt=""></div>` : ""}
+      <div class="scan-success"><span class="check">✓</span><div><strong style="color:var(--green-light);font-size:13px">Label scanned</strong><p>Review and correct any details below before adding.</p></div></div>
+      ${renderWineForm(f, "editFields")}
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-secondary" onclick="setState({capturedImage:null,editFields:null,scanStep:'choose'})" style="flex:1">Rescan</button>
+        <button class="btn-green" onclick="addFromScan()" style="flex:2">Add to Collection</button>
+      </div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderAddManual() {
+  const f = state.addFields || { name:"",vintage:"",region:"",country:"",grape:"",type:"Red",estimatedValue:"",purchasePrice:"",drinkFrom:"",drinkBy:"",peakStart:"",peakEnd:"",rating:"",notes:"",quantity:"1" };
+  let html = `<div style="padding:20px">
+    <button class="back-btn" onclick="goTo('collection')">← Back</button>
+    <h2 class="page-title" style="margin-bottom:4px">Add Wine</h2>
+    <p style="font-size:13px;color:var(--text4);margin-bottom:20px">Enter wine details manually</p>
+    ${renderWineForm(f, "addFields")}
+    <button class="btn-green" onclick="addFromManual()">Add to Collection</button>
+  </div>`;
+  return html;
+}
+
+function renderWineForm(f, stateKey) {
+  const upd = (key) => `setState({${stateKey}:Object.assign({},state.${stateKey},{${key}:this.value})})`;
+  return `
+    <div class="field-group"><div class="label-xs">Wine Name</div>
+      <input value="${escHtml(f.name)}" oninput="${upd('name')}" placeholder="e.g. Château Margaux 2015"></div>
+    <div class="field-row">
+      <div><div class="label-xs">Vintage</div><input value="${escHtml(f.vintage)}" oninput="${upd('vintage')}" placeholder="2020" inputmode="numeric" style="font-family:var(--mono)"></div>
+      <div><div class="label-xs">Type</div><select onchange="${upd('type')}">${["Red","White","Rosé","Sparkling","Dessert"].map(t => `<option ${f.type===t?"selected":""}>${t}</option>`).join("")}</select></div>
+    </div>
+    <div class="field-group"><div class="label-xs">Grape / Variety</div>
+      <input value="${escHtml(f.grape)}" oninput="${upd('grape')}" placeholder="e.g. Cabernet Sauvignon"></div>
+    <div class="field-row">
+      <div><div class="label-xs">Region</div><input value="${escHtml(f.region)}" oninput="${upd('region')}" placeholder="Napa Valley"></div>
+      <div><div class="label-xs">Country</div><input value="${escHtml(f.country)}" oninput="${upd('country')}" placeholder="USA"></div>
+    </div>
+    <div class="field-row-3">
+      <div><div class="label-xs">Qty</div><input type="number" value="${escHtml(f.quantity||"1")}" oninput="${upd('quantity')}" inputmode="numeric" min="1" style="font-family:var(--mono);text-align:center"></div>
+      <div><div class="label-xs">Paid $</div><input type="number" value="${escHtml(f.purchasePrice||f.estimatedValue||"")}" oninput="${upd('purchasePrice')}" inputmode="decimal" style="font-family:var(--mono)"></div>
+      <div><div class="label-xs">Value $</div><input type="number" value="${escHtml(f.estimatedValue||"")}" oninput="${upd('estimatedValue')}" inputmode="decimal" style="font-family:var(--mono);color:var(--gold)"></div>
+    </div>
+    <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div class="label-sm" style="margin-bottom:10px">Drinking Window</div>
+      <div class="field-row-4">
+        ${[{k:"drinkFrom",l:"Ready"},{k:"peakStart",l:"Peak ▸"},{k:"peakEnd",l:"◂ Peak"},{k:"drinkBy",l:"Drink By"}].map(x =>
+          `<div><div style="font-size:10px;color:var(--text5);margin-bottom:3px">${x.l}</div><input type="number" value="${escHtml(f[x.k]||"")}" oninput="${upd(x.k)}" inputmode="numeric" style="padding:8px 4px;text-align:center;font-family:var(--mono);font-size:13px"></div>`
+        ).join("")}
+      </div>
+    </div>
+    <div class="field-row">
+      <div><div class="label-xs">Rating</div><input type="number" value="${escHtml(f.rating||"")}" oninput="${upd('rating')}" inputmode="numeric" placeholder="90" style="font-family:var(--mono)"></div>
+      <div></div>
+    </div>
+    <div class="field-group"><div class="label-xs">Notes</div>
+      <textarea oninput="${upd('notes')}" placeholder="Tasting notes, storage...">${escHtml(f.notes||"")}</textarea></div>
+  `;
+}
+
+// ─── Main Render ───
+function render() {
+  const app = document.getElementById("app");
+  let page = "";
+  if (state.view === "collection") page = renderCollection();
+  else if (state.view === "detail") page = renderDetail();
+  else if (state.view === "scan") page = renderScan();
+  else if (state.view === "add") page = renderAddManual();
+
+  const activeNav = state.view === "collection" ? "cellar" : state.view === "add" ? "add" : "";
+
+  app.innerHTML = `
+    <div class="page" id="page-scroll">${page}</div>
+    <nav class="bottom-nav">
+      <button class="nav-btn ${activeNav==="cellar"?"active":""}" onclick="goTo('collection')">
+        <span class="nav-icon">🏠</span>Cellar
+      </button>
+      <button class="scan-fab" onclick="goTo('scan')">📷</button>
+      <button class="nav-btn ${activeNav==="add"?"active":""}" onclick="goTo('add',{addFields:{name:'',vintage:'',region:'',country:'',grape:'',type:'Red',estimatedValue:'',purchasePrice:'',drinkFrom:'',drinkBy:'',peakStart:'',peakEnd:'',rating:'',notes:'',quantity:'1'}})">
+        <span class="nav-icon">✚</span>Add
+      </button>
+    </nav>
+    ${state.toast ? `<div class="toast">${escHtml(state.toast)}</div>` : ""}
+  `;
+
+  // Restore camera if on camera step
+  if (state.view === "scan" && state.scanStep === "camera" && state.cameraStream) {
+    setTimeout(() => {
+      const v = document.getElementById("camera-video");
+      if (v) v.srcObject = state.cameraStream;
+    }, 30);
+  }
+}
+
+// Initialize
+render();
+</script>
+</body>
+</html>
