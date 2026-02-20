@@ -27,30 +27,41 @@ function toWine(fields, row) {
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
 
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: "ID required" });
+
   try {
-    if (req.method === "GET") {
-      const result = await query("SELECT * FROM wines ORDER BY created_at DESC");
-      const wines = (result.rows || []).map(row => toWine(result.fields, row));
-      return res.status(200).json(wines);
+    if (req.method === "PUT") {
+      const w = req.body;
+      const result = await query(
+        `UPDATE wines SET
+          name = COALESCE($1, name), vintage = COALESCE($2, vintage),
+          region = COALESCE($3, region), country = COALESCE($4, country),
+          grape = COALESCE($5, grape), type = COALESCE($6, type),
+          quantity = COALESCE($7, quantity), purchase_price = COALESCE($8, purchase_price),
+          current_value = COALESCE($9, current_value), drink_from = COALESCE($10, drink_from),
+          drink_by = COALESCE($11, drink_by), peak_start = COALESCE($12, peak_start),
+          peak_end = COALESCE($13, peak_end), rating = COALESCE($14, rating),
+          notes = COALESCE($15, notes)
+        WHERE id = $16 RETURNING *`,
+        [w.name||null, w.vintage||null, w.region||null, w.country||null,
+         w.grape||null, w.type||null, w.quantity!=null?w.quantity:null,
+         w.purchasePrice||null, w.currentValue||null, w.drinkFrom||null,
+         w.drinkBy||null, w.peakStart||null, w.peakEnd||null,
+         w.rating||null, w.notes||null, id]
+      );
+      if (!result.rows?.length) return res.status(404).json({ error: "Wine not found" });
+      return res.status(200).json(toWine(result.fields, result.rows[0]));
     }
 
-    if (req.method === "POST") {
-      const w = req.body;
-      if (!w.name) return res.status(400).json({ error: "Name is required" });
-      const result = await query(
-        `INSERT INTO wines (name, vintage, region, country, grape, type, quantity, purchase_price, current_value, drink_from, drink_by, peak_start, peak_end, rating, notes, image, added_date)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
-        [w.name, w.vintage||null, w.region||null, w.country||null, w.grape||null,
-         w.type||'Red', w.quantity||1, w.purchasePrice||0, w.currentValue||0,
-         w.drinkFrom||null, w.drinkBy||null, w.peakStart||null, w.peakEnd||null,
-         w.rating||null, w.notes||null, w.image||null,
-         w.addedDate || new Date().toISOString().split('T')[0]]
-      );
-      return res.status(201).json(toWine(result.fields, result.rows[0]));
+    if (req.method === "DELETE") {
+      const result = await query("DELETE FROM wines WHERE id = $1", [id]);
+      if (result.rowCount === 0) return res.status(404).json({ error: "Wine not found" });
+      return res.status(200).json({ message: "Deleted" });
     }
 
     return res.status(405).json({ error: "Method not allowed" });
