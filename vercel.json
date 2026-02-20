@@ -1,14 +1,8 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "api/**/*.js", "use": "@vercel/node" }
-  ],
   "routes": [
     { "src": "/api/wines/(.+)", "dest": "/api/wines/[id].js" },
     { "src": "/api/wines", "dest": "/api/wines.js" },
     { "src": "/api/analyze", "dest": "/api/analyze.js" },
-    { "src": "/api/setup", "dest": "/api/setup.js" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/api/setup", "dest": "/api/setup.js" }
   ]
 }
