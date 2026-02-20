@@ -1,8 +1,1 @@
-{
-  "routes": [
-    { "src": "/api/wines/(.+)", "dest": "/api/wines/[id].js" },
-    { "src": "/api/wines", "dest": "/api/wines.js" },
-    { "src": "/api/analyze", "dest": "/api/analyze.js" },
-    { "src": "/api/setup", "dest": "/api/setup.js" }
-  ]
-}
+{}
