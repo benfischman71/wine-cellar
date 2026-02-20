@@ -261,26 +261,26 @@ function getTypeColor(type) {
 }
 function fmt(val) { return "$" + Number(val || 0).toLocaleString("en-US", { maximumFractionDigits: 0 }); }
 
-// ─── Database API ───
 async function loadWinesFromDB() {
   try {
-    const res = await fetch("/api/wines");
+    const res = await fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list" }),
+    });
     if (!res.ok) throw new Error("Failed to load");
     return await res.json();
   } catch (e) {
     console.error("Load error:", e);
-    // Fallback to localStorage if DB not ready
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-    catch { return []; }
+    return [];
   }
 }
-
 async function apiAddWine(wine) {
   try {
-    const res = await fetch("/api/wines", {
+    const res = await fetch("/api/db", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(wine),
+      body: JSON.stringify({ action: "add", ...wine }),
     });
     if (!res.ok) throw new Error("Failed to add");
     return await res.json();
@@ -289,13 +289,12 @@ async function apiAddWine(wine) {
     return null;
   }
 }
-
 async function apiUpdateWine(id, updates) {
   try {
-    const res = await fetch("/api/wines/" + id, {
-      method: "PUT",
+    const res = await fetch("/api/db", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ action: "update", id, ...updates }),
     });
     if (!res.ok) throw new Error("Failed to update");
     return await res.json();
@@ -304,20 +303,20 @@ async function apiUpdateWine(id, updates) {
     return null;
   }
 }
-
 async function apiDeleteWine(id) {
   try {
-    const res = await fetch("/api/wines/" + id, { method: "DELETE" });
+    const res = await fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id }),
+    });
     if (!res.ok) throw new Error("Failed to delete");
     return true;
   } catch (e) {
     console.error("Delete error:", e);
     return false;
   }
-}
-
-// ─── State ───
-let state = {
+}let state = {
   wines: [],
   loading: true,
   view: "collection", // collection | detail | scan | add
