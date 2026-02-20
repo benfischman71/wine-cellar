@@ -1,6 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/wines", "destination": "/api/wines/index" },
-    { "source": "/api/wines/:id", "destination": "/api/wines/[id]" }
-  ]
-}
