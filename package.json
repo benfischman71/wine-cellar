@@ -1,0 +1,8 @@
+{
+  "name": "wine-cellar",
+  "version": "2.0.0",
+  "private": true,
+  "dependencies": {
+    "@vercel/postgres": "^0.10.0"
+  }
+}
