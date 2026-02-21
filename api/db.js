@@ -8,20 +8,41 @@ async function query(sql, params = []) {
     body: JSON.stringify({ query: sql, params }),
   });
   if (!res.ok) throw new Error(await res.text());
-  return await res.json();
+  const data = await res.json();
+  // Neon returns rows as arrays + fields as metadata
+  // Convert to objects
+  const fields = (data.fields || []).map(f => f.name);
+  const rows = (data.rows || []).map(row => {
+    if (Array.isArray(row)) {
+      const obj = {};
+      fields.forEach((name, i) => obj[name] = row[i]);
+      return obj;
+    }
+    return row; // already an object
+  });
+  return { rows, rowCount: data.rowCount || rows.length };
 }
 
-function toWine(fields, row) {
-  const r = {};
-  fields.forEach((f, i) => r[f.name] = row[i]);
+function toWine(r) {
   return {
-    id: r.id, name: r.name, vintage: r.vintage, region: r.region,
-    country: r.country, grape: r.grape, type: r.type, quantity: r.quantity,
+    id: r.id,
+    name: r.name || "",
+    vintage: r.vintage ? Number(r.vintage) : null,
+    region: r.region || "",
+    country: r.country || "",
+    grape: r.grape || "",
+    type: r.type || "Red",
+    quantity: r.quantity != null ? Number(r.quantity) : 1,
     purchasePrice: parseFloat(r.purchase_price) || 0,
     currentValue: parseFloat(r.current_value) || 0,
-    drinkFrom: r.drink_from, drinkBy: r.drink_by,
-    peakStart: r.peak_start, peakEnd: r.peak_end,
-    rating: r.rating, notes: r.notes, image: r.image, addedDate: r.added_date,
+    drinkFrom: r.drink_from ? Number(r.drink_from) : null,
+    drinkBy: r.drink_by ? Number(r.drink_by) : null,
+    peakStart: r.peak_start ? Number(r.peak_start) : null,
+    peakEnd: r.peak_end ? Number(r.peak_end) : null,
+    rating: r.rating ? Number(r.rating) : null,
+    notes: r.notes || "",
+    image: r.image || null,
+    addedDate: r.added_date || "",
   };
 }
 
@@ -48,9 +69,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: "Table created successfully" });
     }
 
+    if (action === "debug") {
+      const result = await query("SELECT * FROM wines LIMIT 1");
+      return res.status(200).json(result);
+    }
+
     if (action === "list") {
       const result = await query("SELECT * FROM wines ORDER BY created_at DESC");
-      const wines = (result.rows || []).map(row => toWine(result.fields, row));
+      const wines = result.rows.map(toWine);
       return res.status(200).json(wines);
     }
 
@@ -66,7 +92,7 @@ export default async function handler(req, res) {
          w.rating||null, w.notes||null, w.image||null,
          w.addedDate || new Date().toISOString().split('T')[0]]
       );
-      return res.status(201).json(toWine(result.fields, result.rows[0]));
+      return res.status(201).json(toWine(result.rows[0]));
     }
 
     if (action === "update") {
@@ -88,8 +114,8 @@ export default async function handler(req, res) {
          w.drinkBy||null, w.peakStart||null, w.peakEnd||null,
          w.rating||null, w.notes||null, w.id]
       );
-      if (!result.rows?.length) return res.status(404).json({ error: "Wine not found" });
-      return res.status(200).json(toWine(result.fields, result.rows[0]));
+      if (!result.rows.length) return res.status(404).json({ error: "Wine not found" });
+      return res.status(200).json(toWine(result.rows[0]));
     }
 
     if (action === "delete") {
