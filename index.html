@@ -492,7 +492,7 @@ function addFromScan() {
     purchasePrice: parseFloat(f.estimatedValue) || 0, currentValue: parseFloat(f.estimatedValue) || 0,
     drinkFrom: parseInt(f.drinkFrom) || CURRENT_YEAR, drinkBy: parseInt(f.drinkBy) || CURRENT_YEAR + 10,
     peakStart: parseInt(f.peakStart) || CURRENT_YEAR + 2, peakEnd: parseInt(f.peakEnd) || CURRENT_YEAR + 8,
-    rating: parseInt(f.rating) || 88, notes: f.notes, image: state.capturedImage,
+    rating: parseInt(f.rating) || 88, notes: f.notes, image: null,
   });
 }
 
